@@ -10,6 +10,7 @@ addpath('scripts')
 addpath('logged_data')
 disp(' ');
 
+
 % Set global variables so that they can be accessed from other matlab
 % functions and files
 global vbox_file_name
@@ -25,8 +26,8 @@ global vbox_file_name
 
 %vbox_file_name='S90__035.VBO';   %Standstill
 
-vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
-%vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
+%vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
+vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
 %vbox_file_name='S90__040.VBO';  %Step steer to the left, v=100km/h
 %vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
 
@@ -148,6 +149,21 @@ yawRate_VBOX    = vbo.channels(1, 56).data.*(-pi/180); %VBOX z-axis is pointing 
 vx_VBOX         = vbo.channels(1, 54).data./3.6;
 vy_VBOX         = vbo.channels(1, 52).data./3.6;
 SteerAngle      = vbo.channels(1, 39).data./Ratio;
-ax_VBOX         = vbo.channels(1, 57).data.*g;
+ax_VBOX         = vbo.channels(1, 57).data.*g; %[m/s^2]
 ay_VBOX         = vbo.channels(1, 58).data.*g;
 Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
+
+%% Model-based body side slip
+vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
+Kroll = rollGrad*pi/180;
+T=1;
+vy_mod_struct = [Time,vy_mod];
+vx_VBOX_struct = [Time,vx_VBOX];
+vy_VBOX_struct = [Time,vy_VBOX];
+yawRate_VBOX_struct = [Time, yawRate_VBOX];
+ay_VBOX_struct = [Time, ay_VBOX];
+
+%% Plot
+
+
+
