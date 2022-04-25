@@ -178,8 +178,8 @@ close all
 figure
 plot(Time, Beta_VBOX)
 hold on
-plot(Time(1:end), ans.beta_kin_est.Data)
-plot(Time(1:end), ans.beta_mod_est.Data)
+plot(Time(1:end), out.beta_kin_est.Data)
+plot(Time(1:end), out.beta_mod_est.Data)
 %plot(Time(1:end),out.beta_washout_est.Data)
 legend('True Beta','Beta estimator kin', 'Beta estimator mod')
 xlabel('Time [s]')
@@ -223,3 +223,5 @@ hold off
 %     hold off
 % end
 % %legend('true value','10000','30000','50000','70000','90000','110000','130000','150000','170000','190000','210000','230000','250000','270000','290000')
+
+C_values = [100]
