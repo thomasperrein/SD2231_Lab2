@@ -27,9 +27,9 @@ global vbox_file_name
 %vbox_file_name='S90__035.VBO';   %Standstill
 
 %vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
-vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
+%vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
 %vbox_file_name='S90__040.VBO';  %Step steer to the left, v=100km/h
-%vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
+vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
 
 
 vboload
@@ -156,14 +156,70 @@ Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
 %% Model-based body side slip
 vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
 Kroll = rollGrad*pi/180;
-T=1;
+T=0.15;
+%Value of T :
+%First test : T = 0.15
+%Second test : T = 0.01
+%Third test : T = 0.1
+%Forth test : T = 0.15
 vy_mod_struct = [Time,vy_mod];
 vx_VBOX_struct = [Time,vx_VBOX];
 vy_VBOX_struct = [Time,vy_VBOX];
 yawRate_VBOX_struct = [Time, yawRate_VBOX];
 ay_VBOX_struct = [Time, ay_VBOX];
+Beta_VBOX_struct = [Time, Beta_VBOX];
+
+threshold_vx = 1; 
+sim wash_out_filter.slx
 
 %% Plot
+close all
 
+figure
+plot(Time, Beta_VBOX)
+hold on
+plot(Time(1:end), ans.beta_kin_est.Data)
+plot(Time(1:end), ans.beta_mod_est.Data)
+%plot(Time(1:end),out.beta_washout_est.Data)
+legend('True Beta','Beta estimator kin', 'Beta estimator mod')
+xlabel('Time [s]')
+ylabel('Beta (rad)')
+title('Estimation of side slip')
+hold off
 
+%'True Beta', 'Beta estimator kin', 'Beta estimator mod',
+%,'Beta estimator washout filter'
 
+%% Study of the behavior of parameters
+
+% C_values = [10000:20000:300000];
+% 
+% for i=1:1:length(C_values)
+%     figure
+%     plot(Time,Beta_VBOX)
+%     hold on
+%     Cf=C_values(i);          % Lateral stiffness front axle (N)
+%     Cr=C_values(i);          % Lateral stiffness rear axle (N)
+%     Kroll = rollGrad*pi/180;
+%     T=0.15;
+%     Time            = vbo.channels(1, 2).data-vbo.channels(1, 2).data(1,1);
+%     yawRate_VBOX    = vbo.channels(1, 56).data.*(-pi/180); %VBOX z-axis is pointing downwards, hence (-)
+%     vx_VBOX         = vbo.channels(1, 54).data./3.6;
+%     vy_VBOX         = vbo.channels(1, 52).data./3.6;
+%     SteerAngle      = vbo.channels(1, 39).data./Ratio;
+%     ax_VBOX         = vbo.channels(1, 57).data.*g; %[m/s^2]
+%     ay_VBOX         = vbo.channels(1, 58).data.*g;
+%     Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
+%     vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
+%     
+%     sim wash_out_filter.slx
+% 
+%     plot(Time(1:end), ans.beta_kin_est.Data)
+%     plot(Time(1:end), ans.beta_mod_est.Data)
+%     legend('true value','kin','mod')
+%     xlabel('Time [s]')
+%     ylabel('Beta (rad)')
+%     title(strcat('Estimation of side slip for Cf=Cr=',num2str(C_values(i))))
+%     hold off
+% end
+% %legend('true value','10000','30000','50000','70000','90000','110000','130000','150000','170000','190000','210000','230000','250000','270000','290000')
