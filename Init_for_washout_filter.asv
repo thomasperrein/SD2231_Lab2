@@ -171,8 +171,6 @@ Beta_VBOX_struct = [Time, Beta_VBOX];
 
 threshold_vx = 1; 
 
-%[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(ourBeta,Beta_VBOX);
-
 %% Plot
 close all
 
@@ -181,7 +179,7 @@ plot(Time, Beta_VBOX)
 hold on
 plot(Time(1:end-1), out.beta_kin_est.Data)
 plot(Time(1:end-1), out.beta_mod_est.Data)
-plot(Time(1:end-1),out.beta_washout_est.Data)
+plot(Time(1:end),out.beta_washout_est.Data)
 legend('True Beta','Beta estimator kin', 'Beta estimator mod','washout')
 xlabel('Time [s]')
 ylabel('Beta (rad)')
