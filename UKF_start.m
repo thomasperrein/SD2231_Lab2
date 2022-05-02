@@ -28,8 +28,7 @@ global lf lr Cf Cr mass Iz vbox_file_name
 %vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
 %vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
 %vbox_file_name='S90__040.VBO';  %Step steer to the left, v=100km/h
-%vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
-
+vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
 
 vboload
 %  Channel 1  = satellites
@@ -232,7 +231,13 @@ end
 %----------------------------------------
 % CALCULATE THE SLIP ANGLE OF THE VEHICLE
 %----------------------------------------
+
 my_beta = atan(x(2,:)./x(1,:));
+for k=1:n
+    if my_beta(k)>0.4 || my_beta(k) < -0.4
+        my_beta(k)=0;
+    end
+end
 
 %---------------------------------------------------------
 % CALCULATE THE ERROR VALES FOR THE ESTIMATE OF SLIP ANGLE

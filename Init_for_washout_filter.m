@@ -157,6 +157,9 @@ Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
 vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf)); 
 Kroll = rollGrad*pi/180;
 T=0.15; 
+a=0.05; %best cir 0.05, 0.05, 1, 0.05
+b=0.5; %best cir 1.5, 0.1, 0.5, 0.1
+Tlist=[Time,a*SteerAngle + b];
 %Value of T : 
 %First test : T = 0.15 
 %Second test : T = 0.01 
@@ -174,40 +177,70 @@ threshold_vx = 1;
 sim wash_out_filter_previous_version.slx
 
 %% Plot
+
+%Note : for the slalom test, you must change Time(1:end) to Time(1:end-1)
+%for each plot function, except (Time, Beta_VBOX) one.
 close all
+% figure
+% subplot(2,1,1)
+% plot(Time, Beta_VBOX)
+% hold on
+% plot(Time(1:end), ans.beta_kin_est.Data)
+% plot(Time(1:end), ans.beta_mod_est.Data)
+% plot(Time(1:end),ans.beta_washout_est.Data)
+% plot(Time(1:end),ans.beta_washout_est_dis.Data)
+% legend('True Beta','Beta estimator kin', 'Beta estimator mod','Washout','discrete')
+% xlabel('Time [s]')
+% ylabel('Beta (rad)')
+% title('Estimation of side slip')
+% hold off 
+% 
+% subplot(2,1,2)
+% plot(Time(1:end),abs(ans.beta_kin_est.Data-Beta_VBOX(1:end)-Beta_VBOX(1:end)),'r')
+% hold on
+% plot(Time(1:end),abs(ans.beta_mod_est.Data-Beta_VBOX(1:end)-Beta_VBOX(1:end)),color=[0.92 0.69 0.125])
+% plot(Time(1:end),abs(ans.beta_washout_est.Data-Beta_VBOX(1:end)-Beta_VBOX(1:end)),'m')
+% xlabel("Time in s")
+% ylabel("Beta in rad")
+% yyaxis right
+% plot(Time,vy_VBOX)
+% ylabel("velocity x in m/s")
+% legend('error kin', 'error mod','error washout', 'velocity')
 
 figure
 plot(Time, Beta_VBOX)
 hold on
-plot(Time(1:end), ans.beta_kin_est.Data)
-plot(Time(1:end), ans.beta_mod_est.Data)
 plot(Time(1:end),ans.beta_washout_est.Data)
-legend('True Beta','Beta estimator kin', 'Beta estimator mod','Washout')
+plot(Time(1:end),ans.beta_washout_est_dis.Data)
+legend('True Beta','Washout','discrete')
 xlabel('Time [s]')
 ylabel('Beta (rad)')
 title('Estimation of side slip')
 hold off 
-
 %---------------------------------------------------------
 % CALCULATE THE ERROR VALES FOR THE ESTIMATE OF SLIP ANGLE
 %---------------------------------------------------------
 Beta_VBOX_smooth=smooth(Beta_VBOX,0.01,'rlowess'); 
 
-[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(ans.beta_kin_est.Data(1:end),Beta_VBOX_smooth(1:end)); 
-disp(' ');
-fprintf('The MSE of Beta kinematic estimation is: %d \n',e_beta_mean);
-fprintf('The Max error of Beta kinematic estimation is: %d \n',e_beta_max);
+% [e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(ans.beta_kin_est.Data(1:end),Beta_VBOX_smooth(1:end)); 
+% disp(' ');
+% fprintf('The MSE of Beta kinematic estimation is: %d \n',e_beta_mean);
+% fprintf('The Max error of Beta kinematic estimation is: %d \n',e_beta_max);
+% 
+% [e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_mod_est.Data(1:end),Beta_VBOX_smooth(1:end));
+% disp(' ');
+% fprintf('The MSE of Beta model-bas~ed estimation is: %d \n',e_beta_mean);
+% fprintf('The Max error of Beta model-based estimation is: %d \n',e_beta_max);
+% 
+% [e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_washout_est.Data(1:end),Beta_VBOX_smooth(1:end));
+% disp(' ');
+% fprintf('The MSE of Beta washout estimation is: %d \n',e_beta_mean);
+% fprintf('The Max error of Beta washout estimation is: %d \n',e_beta_max);
 
-[e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_mod_est.Data(1:end),Beta_VBOX_smooth(1:end));
-disp(' ');
-fprintf('The MSE of Beta model-bas~ed estimation is: %d \n',e_beta_mean);
-fprintf('The Max error of Beta model-based estimation is: %d \n',e_beta_max);
-
-[e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_washout_est.Data(1:end),Beta_VBOX_smooth(1:end));
+[e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_washout_est_dis.Data(1:end),Beta_VBOX_smooth(1:end));
 disp(' ');
 fprintf('The MSE of Beta washout estimation is: %d \n',e_beta_mean);
 fprintf('The Max error of Beta washout estimation is: %d \n',e_beta_max);
-
 %'True Beta', 'Beta estimator kin', 'Beta estimator mod',
 %,'Beta estimator washout filter'
 
