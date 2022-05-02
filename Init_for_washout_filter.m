@@ -27,9 +27,9 @@ global vbox_file_name
 %vbox_file_name='S90__035.VBO';   %Standstill
 
 %vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
-vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
+%vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
 %vbox_file_name='S90__040.VBO';  %Step steer to the left, v=100km/h
-%vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
+vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
 
 
 vboload
@@ -121,13 +121,13 @@ mass=2010.5;        % Mass (kg)
 Iz=3089;            % Yaw inertia (kg-m2)
 tw=1.617;           % Track width (m)
 h_cog = 0.570;      % Height of CoG above ground
-Ratio=17;         % Steering gear ratio
+Ratio=25;         % Steering gear ratio 
 Cf=175000;          % Lateral stiffness front axle (N)
 Cr=175000;          % Lateral stiffness rear axle (N)
 Lx_relax=0.05;      % Longitudinal relaxation lenth of tyre (m)
 Ly_relax=0.15;      % Lateral relaxation lenth of tyre (m)
 Roll_res=0.01;      % Rolling resistance of tyre
-rollGrad=4.24;       % rollangle deg per latacc
+rollGrad=4.1;       % rollangle deg per latacc
 rx=0.29;            % distance from CoG to IMU x-axle
 ry=0;               % distance from CoG to IMU y-axle
 rz=0;               % distance from CoG to IMU z-axle
@@ -151,27 +151,27 @@ vy_VBOX         = vbo.channels(1, 52).data./3.6;
 SteerAngle      = vbo.channels(1, 39).data./Ratio;
 ax_VBOX         = vbo.channels(1, 57).data.*g; %[m/s^2]
 ay_VBOX         = vbo.channels(1, 58).data.*g;
-Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
+Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX; 
 
 %% Model-based body side slip
-vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
+vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf)); 
 Kroll = rollGrad*pi/180;
-T=0.15;
-%Value of T :
-%First test : T = 0.15
-%Second test : T = 0.01
-%Third test : T = 0.1
-%Forth test : T = 0.15
+T=0.15; 
+%Value of T : 
+%First test : T = 0.15 
+%Second test : T = 0.01 
+%Third test : T = 0.1 
+%Forth test : T = 0.15 
 vy_mod_struct = [Time,vy_mod];
 vx_VBOX_struct = [Time,vx_VBOX];
 vy_VBOX_struct = [Time,vy_VBOX];
 yawRate_VBOX_struct = [Time, yawRate_VBOX];
 ay_VBOX_struct = [Time, ay_VBOX];
-Beta_VBOX_struct = [Time, Beta_VBOX];
+Beta_VBOX_struct = [Time, Beta_VBOX]; 
+SteerAngle_struct = [Time,SteerAngle];
 
 threshold_vx = 1; 
-
-%[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(ourBeta,Beta_VBOX);
+sim wash_out_filter_previous_version.slx
 
 %% Plot
 close all
@@ -179,97 +179,35 @@ close all
 figure
 plot(Time, Beta_VBOX)
 hold on
-plot(Time(1:end-1), out.beta_kin_est.Data)
-plot(Time(1:end-1), out.beta_mod_est.Data)
-plot(Time(1:end-1),out.beta_washout_est.Data)
-legend('True Beta','Beta estimator kin', 'Beta estimator mod','washout')
+plot(Time(1:end), ans.beta_kin_est.Data)
+plot(Time(1:end), ans.beta_mod_est.Data)
+plot(Time(1:end),ans.beta_washout_est.Data)
+legend('True Beta','Beta estimator kin', 'Beta estimator mod','Washout')
 xlabel('Time [s]')
 ylabel('Beta (rad)')
 title('Estimation of side slip')
-hold off
+hold off 
+
+%---------------------------------------------------------
+% CALCULATE THE ERROR VALES FOR THE ESTIMATE OF SLIP ANGLE
+%---------------------------------------------------------
+Beta_VBOX_smooth=smooth(Beta_VBOX,0.01,'rlowess'); 
+
+[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(ans.beta_kin_est.Data(1:end),Beta_VBOX_smooth(1:end)); 
+disp(' ');
+fprintf('The MSE of Beta kinematic estimation is: %d \n',e_beta_mean);
+fprintf('The Max error of Beta kinematic estimation is: %d \n',e_beta_max);
+
+[e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_mod_est.Data(1:end),Beta_VBOX_smooth(1:end));
+disp(' ');
+fprintf('The MSE of Beta model-bas~ed estimation is: %d \n',e_beta_mean);
+fprintf('The Max error of Beta model-based estimation is: %d \n',e_beta_max);
+
+[e_beta_mean,e_beta_max,~,~] = errorCalc(ans.beta_washout_est.Data(1:end),Beta_VBOX_smooth(1:end));
+disp(' ');
+fprintf('The MSE of Beta washout estimation is: %d \n',e_beta_mean);
+fprintf('The Max error of Beta washout estimation is: %d \n',e_beta_max);
 
 %'True Beta', 'Beta estimator kin', 'Beta estimator mod',
 %,'Beta estimator washout filter'
-temp1 = out.beta_kin_est.Data ;
-temp2 = out.beta_mod_est.Data ;
 
-%% Study of the behavior of parameters
-
-% C_values = [10000:20000:300000];
-% 
-% for i=1:1:length(C_values)
-%     figure
-%     plot(Time,Beta_VBOX)
-%     hold on
-%     Cf=C_values(i);          % Lateral stiffness front axle (N)
-%     Cr=C_values(i);          % Lateral stiffness rear axle (N)
-%     Kroll = rollGrad*pi/180;
-%     T=0.15;
-%     Time            = vbo.channels(1, 2).data-vbo.channels(1, 2).data(1,1);
-%     yawRate_VBOX    = vbo.channels(1, 56).data.*(-pi/180); %VBOX z-axis is pointing downwards, hence (-)
-%     vx_VBOX         = vbo.channels(1, 54).data./3.6;
-%     vy_VBOX         = vbo.channels(1, 52).data./3.6;
-%     SteerAngle      = vbo.channels(1, 39).data./Ratio;
-%     ax_VBOX         = vbo.channels(1, 57).data.*g; %[m/s^2]
-%     ay_VBOX         = vbo.channels(1, 58).data.*g;
-%     Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
-%     vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
-%     
-%     sim wash_out_filter.slx
-% 
-%     plot(Time(1:end), ans.beta_kin_est.Data)
-%     plot(Time(1:end), ans.beta_mod_est.Data)
-%     legend('true value','kin','mod')
-%     xlabel('Time [s]')
-%     ylabel('Beta (rad)')
-%     title(strcat('Estimation of side slip for Cf=Cr=',num2str(C_values(i))))
-%     hold off
-% end
-% %legend('true value','10000','30000','50000','70000','90000','110000','130000','150000','170000','190000','210000','230000','250000','270000','290000')
-%% Change value of tune parameter
-% C_values = [100000 200000 50000 25000 300000 175000];
-% k=6;
-% Cf = C_values(k);
-% Cr = C_values(k);
-r_values = [0.70 0.12 0.20];
-k=1;
-Rt = r_values(k);
-Time            = vbo.channels(1, 2).data-vbo.channels(1, 2).data(1,1);
-yawRate_VBOX    = vbo.channels(1, 56).data.*(-pi/180); %VBOX z-axis is pointing downwards, hence (-)
-vx_VBOX         = vbo.channels(1, 54).data./3.6;
-vy_VBOX         = vbo.channels(1, 52).data./3.6;
-SteerAngle      = vbo.channels(1, 39).data./Ratio;
-ax_VBOX         = vbo.channels(1, 57).data.*g; %[m/s^2]
-ay_VBOX         = vbo.channels(1, 58).data.*g;
-Beta_VBOX       = (vy_VBOX + rx*yawRate_VBOX)./vx_VBOX;
-vy_mod = vx_VBOX.*(lr*(lf+lr)*Cf*Cr-lf*Cf*mass*vx_VBOX.^2).*SteerAngle./((lf+lr)^2*Cf*Cr+mass*vx_VBOX.^2*(lr*Cr-lf*Cf));
-Kroll = rollGrad*pi/180;
-T=0.15;
-%Value of T :
-%First test : T = 0.15
-%Second test : T = 0.01
-%Third test : T = 0.1
-%Forth test : T = 0.15
-vy_mod_struct = [Time,vy_mod];
-vx_VBOX_struct = [Time,vx_VBOX];
-vy_VBOX_struct = [Time,vy_VBOX];
-yawRate_VBOX_struct = [Time, yawRate_VBOX];
-ay_VBOX_struct = [Time, ay_VBOX];
-Beta_VBOX_struct = [Time, Beta_VBOX];
-
-threshold_vx = 1; 
-%%
-close all
-
-figure
-plot(Time(1:end),temp1)
-hold on
-plot(Time(1:end),temp2)
-plot(Time(1:end),Beta_VBOX)
-plot(Time(1:end), out.beta_kin_est.Data)
-plot(Time(1:end), out.beta_mod_est.Data)
-legend("beta kin default","beta mod default","true beta","new beta kin","new beta mod")
-xlabel('Time [s]')
-ylabel('Beta (rad)')
-title(strcat('Estimation of side slip for rt =',int2str(r_values(k))))
-hold off

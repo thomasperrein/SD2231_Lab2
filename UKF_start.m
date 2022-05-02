@@ -25,7 +25,7 @@ global lf lr Cf Cr mass Iz vbox_file_name
 
 %vbox_file_name='S90__035.VBO';   %Standstill
 
-vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
+%vbox_file_name='S90__036.VBO';   %Circular driving to the left, radius=8m
 %vbox_file_name='S90__038.VBO';  %Slalom, v=30km/h
 %vbox_file_name='S90__040.VBO';  %Step steer to the left, v=100km/h
 %vbox_file_name='S90__041.VBO';  %Frequency sweep, v=50km/h
@@ -121,8 +121,8 @@ Iz=3089;            % Yaw inertia (kg-m2)
 tw=1.617;           % Track width (m)
 h_cog = 0.570;      % Height of CoG above ground
 Ratio=16.3;         % Steering gear ratio
-Cf=100000;          % Lateral stiffness front axle (N)
-Cr=100000;          % Lateral stiffness rear axle (N)
+Cf=175000;          % Lateral stiffness front axle (N)
+Cr=175000;          % Lateral stiffness rear axle (N)
 Lx_relax=0.05;      % Longitudinal relaxation lenth of tyre (m)
 Ly_relax=0.15;      % Lateral relaxation lenth of tyre (m)
 Roll_res=0.01;      % Rolling resistance of tyre
@@ -159,16 +159,20 @@ dt = Time(2)-Time(1);
 % SET MEASUREMENT AND PROCESS NOICE COVARIANCES
 %----------------------------------------------
 % Use as starting value 0.1 for each of the states in Q matrix
-Q=
+Q= [0.1 0 0;
+    0 0.1 0;
+    0 0 0.1;];
 
 % Use as starting value 0.01 for each of the measurements in R matrix
-R=
+R= [0.01 0 0;
+    0 0.01 0;
+    0 0 0.01;];
 
 %--------------------------------------------------
 % SET INITIAL STATE AND STATE ESTIMATION COVARIANCE
 %--------------------------------------------------
-x_0=
-P_0= 
+x_0=[0.1 0.1 0.1]';
+P_0= Q;
 
 
 %-----------------------
@@ -183,6 +187,13 @@ predictParam.dt=dt;
 state_func_UKF = @Vehicle_state_eq;
 meas_func_UKF = @Vehicle_measure_eq;
 
+%retrieve the values
+x=zeros(3,n);
+x(:,1)=x_0;
+
+P=zeros(3,3,n);
+P(:,:,1)=P_0;
+
 %-----------------------
 % FILTERING LOOP FOR UKF 
 %-----------------------
@@ -191,10 +202,15 @@ disp('Filtering the signal with UKF...');
 
 for i = 2:n
 
-
     % ad your predict and update functions, see the scripts ukf_predict1.m
     % and ukf_update1.m
+    predictParam.SteerAngle=SteerAngle(i);
 
+    [x(:,i-1),P] = ukf_predict1(x(:,i-1),P(:,:,i-1),state_func_UKF,Q,predictParam);
+    P(:,:,i-1)=P;
+    Y = [vx_VBOX(i);ay_VBOX(i);yawRate_VBOX(i)];
+    [x(:,i),P,~,~,~,~] = ukf_update1(x(:,i-1),P(:,:,i-1),Y,meas_func_UKF,R,predictParam);
+    P(:,:,i)=P;
     
     if i==round(n/4)
         disp(' ');
@@ -216,13 +232,13 @@ end
 %----------------------------------------
 % CALCULATE THE SLIP ANGLE OF THE VEHICLE
 %----------------------------------------
-
+my_beta = atan(x(2,:)./x(1,:));
 
 %---------------------------------------------------------
 % CALCULATE THE ERROR VALES FOR THE ESTIMATE OF SLIP ANGLE
 %---------------------------------------------------------
 Beta_VBOX_smooth=smooth(Beta_VBOX,0.01,'rlowess'); 
-[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(YOUR BETA',Beta_VBOX_smooth);
+[e_beta_mean,e_beta_max,time_at_max,error] = errorCalc(my_beta(2:end-1)',Beta_VBOX_smooth(2:end-1));
 disp(' ');
 fprintf('The MSE of Beta estimation is: %d \n',e_beta_mean);
 fprintf('The Max error of Beta estimation is: %d \n',e_beta_max);
@@ -231,3 +247,11 @@ fprintf('The Max error of Beta estimation is: %d \n',e_beta_max);
 % PLOT THE RESULTS
 %-----------------
 
+figure
+plot(Time(2:end-1),Beta_VBOX_smooth(2:end-1))
+hold on
+plot(Time(2:end-1),my_beta(2:end-1))
+legend('True','UKF')
+xlabel('Time')
+ylabel('Beta [rad]')
+hold off
